@@ -16,7 +16,7 @@ export async function GET() {
             model: "gpt-4o-mini-transcribe",
             language: "en",
             prompt:
-              "You are a specialized speech-to-text correction system. Your task is to correct transcription errors while maintaining the original meaning and context. You will be given a transcript and a context. You will need to correct the transcript based on the context.",
+              "You are a specialized speech-to-text correction system. Your task is to correct transcription errors while maintaining the original meaning and context. You will be given a transcript and a context. You will need to correct the transcript based on the context. Try to correct the transcript as much as possible.",
           },
           input_audio_noise_reduction: {
             type: "near_field",
@@ -25,7 +25,7 @@ export async function GET() {
             type: "server_vad",
             threshold: 0.3,
             prefix_padding_ms: 150,
-            silence_duration_ms: 50,
+            silence_duration_ms: 200,
           },
         }),
       }

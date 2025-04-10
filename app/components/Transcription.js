@@ -200,14 +200,13 @@ export default function Transcription({ parentDarkMode }) {
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 language: "en",
-                prompt:
-                  "You are a specialized speech-to-text correction system. Your task is to correct transcription errors while maintaining the original meaning and context. You will be given a transcript and a context. You will need to correct the transcript based on the context.",
               },
               turn_detection: {
-                type: "server_vad",
+                type: "semantic_vad",
+                eagerness: "high",
                 threshold: 0.5,
                 prefix_padding_ms: 100,
-                silence_duration_ms: 100,
+                silence_duration_ms: 200,
               },
               input_audio_noise_reduction: {
                 type: "near_field",
