@@ -205,7 +205,6 @@ export default function Transcription({ parentDarkMode }) {
           dc.send(
             JSON.stringify({
               type: "transcription_session.update",
-              session: SESSION_ID, // Use the stored session ID
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 model: "gpt-4o-mini-transcribe",
