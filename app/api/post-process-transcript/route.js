@@ -4,6 +4,8 @@ export async function POST(request) {
   try {
     const { text, context } = await request.json();
 
+    console.log("text", text);
+    console.log("context", context);
     if (!text || text.trim() === "") {
       return NextResponse.json({ correctedText: text });
     }

@@ -32,6 +32,8 @@ export default function Transcription({ parentDarkMode }) {
   const wordBuffer = useRef([]);
   const lastCorrectionTime = useRef(Date.now());
   const isProcessing = useRef(false);
+  const transcriptsRef = useRef([]);
+  const confirmedTextRef = useRef("");
 
   // Sync dark mode with parent
   useEffect(() => {
@@ -39,6 +41,15 @@ export default function Transcription({ parentDarkMode }) {
       setDarkMode(parentDarkMode);
     }
   }, [parentDarkMode]);
+
+  // Add a useEffect to keep the refs in sync with state
+  useEffect(() => {
+    transcriptsRef.current = transcripts;
+  }, [transcripts]);
+
+  useEffect(() => {
+    confirmedTextRef.current = confirmedText;
+  }, [confirmedText]);
 
   // Scroll to bottom when new transcripts arrive
   useEffect(() => {
@@ -189,12 +200,14 @@ export default function Transcription({ parentDarkMode }) {
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 language: "en",
+                prompt:
+                  "You are a specialized speech-to-text correction system. Your task is to correct transcription errors while maintaining the original meaning and context. You will be given a transcript and a context. You will need to correct the transcript based on the context.",
               },
               turn_detection: {
-                type: "semantic_vad",
-                eagerness: "high",
+                type: "server_vad",
                 threshold: 0.5,
                 prefix_padding_ms: 100,
+                silence_duration_ms: 100,
               },
               input_audio_noise_reduction: {
                 type: "near_field",
@@ -237,13 +250,20 @@ export default function Transcription({ parentDarkMode }) {
         return text;
       }
 
-      // Get context from the most recent transcript or provided context
-      const context =
-        previousContext ||
-        (transcripts.length > 0
-          ? transcripts[transcripts.length - 1].text
-          : "");
+      // Use provided context if available, otherwise use formatted transcripts from the ref
+      let context = previousContext;
 
+      if (!context) {
+        // Use the ref to get the latest value
+        const latestTranscripts = transcriptsRef.current;
+        if (latestTranscripts && latestTranscripts.length > 0) {
+          context = latestTranscripts.map((t) => t.text).join(" ");
+        } else {
+          context = confirmedTextRef.current || "";
+        }
+      }
+
+      console.log("Sending for correction with context:", context);
       const response = await fetch("/api/post-process-transcript", {
         method: "POST",
         headers: {
@@ -279,8 +299,21 @@ export default function Transcription({ parentDarkMode }) {
       // Join all words in the buffer
       const textToCorrect = wordBuffer.current.join(" ");
 
-      // Send for correction
-      const correctedText = await correctTranscription(textToCorrect);
+      // Use refs to get the latest values
+      const latestTranscripts = transcriptsRef.current;
+      let contextText = "";
+
+      if (latestTranscripts.length > 0) {
+        contextText = latestTranscripts.map((t) => t.text).join(" ");
+      } else {
+        contextText = confirmedTextRef.current || "";
+      }
+
+      // Send for correction with context
+      const correctedText = await correctTranscription(
+        textToCorrect,
+        contextText
+      );
 
       // Update confirmed text with the corrected version
       setConfirmedText((prev) => {
@@ -352,16 +385,24 @@ export default function Transcription({ parentDarkMode }) {
         }
 
         correctionTimeoutRef.current = setTimeout(async () => {
-          if (tentativeText && tentativeText.trim().length > 0) {
+          // Get the latest tentative text directly
+          const currentTentative = tentativeText;
+          if (currentTentative && currentTentative.trim().length > 0) {
             try {
-              const contextText =
-                confirmedText ||
-                (transcripts.length > 0
-                  ? transcripts[transcripts.length - 1].text
-                  : "");
+              // Use refs to get the latest values
+              const latestTranscripts = transcriptsRef.current;
+              const currentConfirmedText = confirmedTextRef.current;
+
+              // Build context from the latest values
+              let contextText = currentConfirmedText || "";
+
+              if (!contextText && latestTranscripts.length > 0) {
+                contextText =
+                  latestTranscripts[latestTranscripts.length - 1].text;
+              }
 
               const correctedText = await correctTranscription(
-                tentativeText,
+                currentTentative,
                 contextText
               );
 
@@ -388,12 +429,16 @@ export default function Transcription({ parentDarkMode }) {
       const fullText = event.transcript;
       console.log("Completed transcription:", fullText);
 
+      // Get context using refs to ensure latest values
+      const latestTranscripts = transcriptsRef.current;
+      const currentConfirmedText = confirmedTextRef.current;
+
       // Get context from confirmed text or recent transcripts
-      const contextText =
-        confirmedText ||
-        (transcripts.length > 0
-          ? transcripts[transcripts.length - 1].text
-          : "");
+      let contextText = currentConfirmedText || "";
+
+      if (!contextText && latestTranscripts.length > 0) {
+        contextText = latestTranscripts[latestTranscripts.length - 1].text;
+      }
 
       // Correct the final text with context
       correctTranscription(fullText, contextText).then((correctedText) => {
