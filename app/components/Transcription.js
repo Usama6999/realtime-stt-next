@@ -103,6 +103,11 @@ export default function Transcription({ parentDarkMode }) {
       const data = await tokenResponse.json();
       console.log("Received session token:", data);
 
+      // Check if session data exists
+      if (!data.id) {
+        throw new Error("No session ID in response: " + JSON.stringify(data));
+      }
+
       // Check if client_secret exists
       if (!data.client_secret) {
         throw new Error(
@@ -112,6 +117,9 @@ export default function Transcription({ parentDarkMode }) {
 
       // Use the client_secret.value as the ephemeral key
       const EPHEMERAL_KEY = data.client_secret.value;
+
+      // Store the session ID for later use
+      const SESSION_ID = data.id;
 
       // Create a peer connection with optimized configuration
       const pc = new RTCPeerConnection({
@@ -197,8 +205,10 @@ export default function Transcription({ parentDarkMode }) {
           dc.send(
             JSON.stringify({
               type: "transcription_session.update",
+              session: SESSION_ID, // Use the stored session ID
               input_audio_format: "pcm16",
               input_audio_transcription: {
+                model: "gpt-4o-mini-transcribe",
                 language: "en",
               },
               turn_detection: {
