@@ -101,7 +101,7 @@ export default function Transcription({ parentDarkMode }) {
       }
 
       const data = await tokenResponse.json();
-      console.log("Received session token:", data);
+      console.log("Received session data:", data);
 
       // Check if session data exists
       if (!data.id) {
@@ -118,8 +118,9 @@ export default function Transcription({ parentDarkMode }) {
       // Use the client_secret.value as the ephemeral key
       const EPHEMERAL_KEY = data.client_secret.value;
 
-      // Store the session ID for later use
+      // Store the session data
       const SESSION_ID = data.id;
+      const SESSION_OBJECT = data;
 
       // Create a peer connection with optimized configuration
       const pc = new RTCPeerConnection({
@@ -199,15 +200,16 @@ export default function Transcription({ parentDarkMode }) {
       await pc.setRemoteDescription(answer);
 
       // Send the transcription configuration
-      console.log("Sending transcription configuration");
+      console.log("Sending transcription session update");
       setTimeout(() => {
         if (dc.readyState === "open") {
-          dc.send(
-            JSON.stringify({
-              type: "transcription_session.update",
+          const configMessage = {
+            type: "transcription_session.update",
+            session: {
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 model: "gpt-4o-mini-transcribe",
+                prompt: "",
                 language: "en",
               },
               turn_detection: {
@@ -220,9 +222,11 @@ export default function Transcription({ parentDarkMode }) {
               input_audio_noise_reduction: {
                 type: "near_field",
               },
-              modalities: ["text"],
-            })
-          );
+            },
+          };
+
+          console.log("Sending config message:", configMessage);
+          dc.send(JSON.stringify(configMessage));
         }
       }, 1000);
     } catch (error) {
