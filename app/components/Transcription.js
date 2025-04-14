@@ -20,7 +20,8 @@ export default function Transcription({ parentDarkMode }) {
   const [transcripts, setTranscripts] = useState([]);
   const [confirmedText, setConfirmedText] = useState("");
   const [tentativeText, setTentativeText] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("English");
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [userPrompt, setUserPrompt] = useState("");
   const [microphoneAllowed, setMicrophoneAllowed] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -92,7 +93,11 @@ export default function Transcription({ parentDarkMode }) {
 
     try {
       // Get a session token for OpenAI Realtime Transcription API
-      const tokenResponse = await fetch("/api/transcription-token");
+      const tokenResponse = await fetch(
+        `/api/transcription-token?language=${selectedLanguage}&prompt=${encodeURIComponent(
+          userPrompt
+        )}`
+      );
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
@@ -209,8 +214,7 @@ export default function Transcription({ parentDarkMode }) {
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 model: "gpt-4o-mini-transcribe",
-                prompt: "",
-                language: "en",
+                language: selectedLanguage,
               },
               turn_detection: {
                 type: "semantic_vad",
@@ -521,11 +525,11 @@ export default function Transcription({ parentDarkMode }) {
       ) : (
         <div
           className="flex flex-col h-full max-w-4xl mx-auto w-full p-4"
-          style={{ height: "600px", width: "700px" }}
+          style={{ height: "800px", width: "700px" }}
         >
           {/* Header */}
           <header
-            className={`flex justify-between items-center py-4 px-6 ${cardClass} rounded-xl mb-6 border shadow-sm`}
+            className={`flex justify-between items-center py-3 px-6 ${cardClass} rounded-xl mb-3 border shadow-sm`}
           >
             <div className="flex items-center gap-3">
               <div
@@ -552,108 +556,88 @@ export default function Transcription({ parentDarkMode }) {
                 <h2 className="text-xl font-bold">Realtime Transcription</h2>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className={`p-2 rounded-full ${buttonSecondary} border`}
-              >
-                <Sliders size={20} />
-              </button>
-            </div>
           </header>
 
-          {/* Settings panel */}
-          {showSettings && (
-            <div
-              className={`mb-6 ${cardClass} rounded-xl border p-5 shadow-sm transition-all duration-300`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg">Settings</h3>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block mb-2 text-sm font-medium">
+          {/* Configuration Panel */}
+          <div
+            className={`mb-3 ${cardClass} rounded-xl border p-3 shadow-sm transition-all duration-300`}
+          >
+            <div className="flex flex-col gap-4">
+              {/* First row: Language and Actions */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <label className="block mb-1 text-sm font-medium text-gray-600">
                     Language
                   </label>
                   <div className="relative">
                     <select
-                      className={`w-full p-2.5 rounded-lg border ${
+                      className={`w-full p-2 rounded-lg border ${
                         darkMode
-                          ? "bg-gray-700 border-gray-600"
-                          : "bg-white border-gray-300"
-                      } appearance-none`}
+                          ? "bg-gray-700 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-800"
+                      } appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                       value={selectedLanguage}
                       onChange={(e) => setSelectedLanguage(e.target.value)}
-                      disabled
                     >
-                      <option value="English">English</option>
+                      <option value="da">Danish</option>
+                      <option value="en">English</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                       <ChevronDown size={16} className="opacity-70" />
                     </div>
                   </div>
-                  <p className="mt-1 text-xs opacity-60">
-                    More languages coming soon
-                  </p>
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-sm font-medium">
-                    Actions
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={copyTranscriptsToClipboard}
-                      className={`flex items-center gap-1 p-2 rounded-lg ${buttonSecondary} border flex-1`}
-                    >
-                      <Clipboard size={16} />
-                      <span>Copy</span>
-                    </button>
-                    <button
-                      onClick={downloadTranscriptsAsText}
-                      className={`flex items-center gap-1 p-2 rounded-lg ${buttonSecondary} border flex-1`}
-                    >
-                      <Download size={16} />
-                      <span>Download</span>
-                    </button>
-                    <button
-                      onClick={() => setTranscripts([])}
-                      className={`flex items-center gap-1 p-2 rounded-lg ${buttonSecondary} border flex-1`}
-                    >
-                      <RefreshCw size={16} />
-                      <span>Clear</span>
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={copyTranscriptsToClipboard}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg ${buttonSecondary} border hover:bg-gray-50 transition-colors`}
+                  >
+                    <Clipboard size={16} />
+                    <span className="text-sm">Copy</span>
+                  </button>
+                  <button
+                    onClick={downloadTranscriptsAsText}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg ${buttonSecondary} border hover:bg-gray-50 transition-colors`}
+                  >
+                    <Download size={16} />
+                    <span className="text-sm">Download</span>
+                  </button>
+                  <button
+                    onClick={() => setTranscripts([])}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg ${buttonSecondary} border hover:bg-gray-50 transition-colors`}
+                  >
+                    <RefreshCw size={16} />
+                    <span className="text-sm">Clear</span>
+                  </button>
                 </div>
               </div>
+
+              {/* Second row: Prompt spanning full width */}
+              <div>
+                <label className="block mb-1 text-sm font-medium text-gray-600">
+                  User Prompt
+                </label>
+                <textarea
+                  className={`w-full p-2 rounded-lg border ${
+                    darkMode
+                      ? "bg-gray-700 border-gray-600 text-white"
+                      : "bg-white border-gray-300 text-gray-800"
+                  } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  value={userPrompt}
+                  onChange={(e) => setUserPrompt(e.target.value)}
+                  placeholder="Enter any specific instructions or context for the transcription..."
+                  rows={2}
+                />
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Main transcript area */}
           <main
             ref={transcriptContainerRef}
-            className={`flex-1 overflow-y-auto overflow-x-hidden ${cardClass} rounded-xl border p-6 mb-6 shadow-sm transition-all duration-300`}
-            style={{ maxWidth: "700px" }}
+            className={`flex-1 overflow-y-auto overflow-x-hidden ${cardClass} rounded-xl border p-6 mb-3 shadow-sm transition-all duration-300`}
+            style={{ maxWidth: "700px", minHeight: "400px" }}
           >
             {isRecording && (
               <div className="mb-4 flex items-center px-4 py-2 rounded-full bg-red-100 text-red-600 w-fit">

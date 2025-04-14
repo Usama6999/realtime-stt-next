@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request) {
   try {
+    // Get language and prompt from query parameters
+    const { searchParams } = new URL(request.url);
+    const language = searchParams.get("language") || "en";
+    const prompt = searchParams.get("prompt") || "";
+
     const response = await fetch(
       "https://api.openai.com/v1/realtime/transcription_sessions",
       {
@@ -14,8 +19,8 @@ export async function GET() {
           input_audio_format: "pcm16",
           input_audio_transcription: {
             model: "gpt-4o-mini-transcribe",
-            language: "en",
-            prompt: "",
+            language: language,
+            prompt: prompt || "",
           },
           input_audio_noise_reduction: {
             type: "near_field",
