@@ -214,7 +214,8 @@ export default function Transcription({ parentDarkMode }) {
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 model: "gpt-4o-mini-transcribe",
-                prompt: userPrompt,
+                prompt: `The below transcription will be generic. User will provide special instructions below.
+                Make sure to only follow them when they are applicable and make sure to not to include extra while generating the transcription. Here's the user instructions: ${userPrompt}`,
                 language: selectedLanguage,
               },
               turn_detection: {
@@ -271,14 +272,28 @@ export default function Transcription({ parentDarkMode }) {
         // Use the ref to get the latest value
         const latestTranscripts = transcriptsRef.current;
         if (latestTranscripts && latestTranscripts.length > 0) {
-          context = latestTranscripts.map((t) => t.text).join(" ");
+          // Get the last 5 transcripts (or fewer if not available)
+          const recentTranscripts = latestTranscripts.slice(
+            Math.max(0, latestTranscripts.length - 5)
+          );
+          // Format each transcript with its index
+          context = recentTranscripts
+            .map(
+              (t, i) =>
+                `Transcript ${
+                  latestTranscripts.length - recentTranscripts.length + i + 1
+                }: ${t.text}`
+            )
+            .join("\n");
         } else {
           context = confirmedTextRef.current || "";
         }
       }
 
       console.log("Sending for correction with context:", context);
-      const response = await fetch("/api/post-process-transcript", {
+      let response;
+
+      response = await fetch("/api/post-process-transcript", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -286,11 +301,13 @@ export default function Transcription({ parentDarkMode }) {
         body: JSON.stringify({
           text,
           context,
+          prompt: userPrompt,
         }),
       });
 
-      if (response.ok) {
+      if (response?.ok) {
         const data = await response.json();
+        console.log("Corrected Text", data.correctedText);
         return data.correctedText;
       }
       return text; // fallback to original if API fails
@@ -318,7 +335,19 @@ export default function Transcription({ parentDarkMode }) {
       let contextText = "";
 
       if (latestTranscripts.length > 0) {
-        contextText = latestTranscripts.map((t) => t.text).join(" ");
+        // Get the last 5 transcripts (or fewer if not available)
+        const recentTranscripts = latestTranscripts.slice(
+          Math.max(0, latestTranscripts.length - 5)
+        );
+        // Format each transcript with its index for better context
+        contextText = recentTranscripts
+          .map(
+            (t, i) =>
+              `Transcript ${
+                latestTranscripts.length - recentTranscripts.length + i + 1
+              }: ${t.text}`
+          )
+          .join("\n");
       } else {
         contextText = confirmedTextRef.current || "";
       }
@@ -407,12 +436,26 @@ export default function Transcription({ parentDarkMode }) {
               const latestTranscripts = transcriptsRef.current;
               const currentConfirmedText = confirmedTextRef.current;
 
-              // Build context from the latest values
+              // Build context from the latest values with better formatting
               let contextText = currentConfirmedText || "";
 
-              if (!contextText && latestTranscripts.length > 0) {
-                contextText =
-                  latestTranscripts[latestTranscripts.length - 1].text;
+              if (latestTranscripts.length > 0) {
+                // Get the last 5 transcripts (or fewer if not available)
+                const recentTranscripts = latestTranscripts.slice(
+                  Math.max(0, latestTranscripts.length - 5)
+                );
+                // Format each transcript with its index for better context
+                contextText = recentTranscripts
+                  .map(
+                    (t, i) =>
+                      `Transcript ${
+                        latestTranscripts.length -
+                        recentTranscripts.length +
+                        i +
+                        1
+                      }: ${t.text}`
+                  )
+                  .join("\n");
               }
 
               const correctedText = await correctTranscription(
@@ -447,11 +490,23 @@ export default function Transcription({ parentDarkMode }) {
       const latestTranscripts = transcriptsRef.current;
       const currentConfirmedText = confirmedTextRef.current;
 
-      // Get context from confirmed text or recent transcripts
+      // Get context from recent transcripts with more comprehensive formatting
       let contextText = currentConfirmedText || "";
 
-      if (!contextText && latestTranscripts.length > 0) {
-        contextText = latestTranscripts[latestTranscripts.length - 1].text;
+      if (latestTranscripts.length > 0) {
+        // Get the last 5 transcripts (or fewer if not available)
+        const recentTranscripts = latestTranscripts.slice(
+          Math.max(0, latestTranscripts.length - 5)
+        );
+        // Format each transcript with its index for better context
+        contextText = recentTranscripts
+          .map(
+            (t, i) =>
+              `Transcript ${
+                latestTranscripts.length - recentTranscripts.length + i + 1
+              }: ${t.text}`
+          )
+          .join("\n");
       }
 
       // Correct the final text with context

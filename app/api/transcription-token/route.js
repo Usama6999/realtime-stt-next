@@ -20,7 +20,6 @@ export async function GET(request) {
           input_audio_transcription: {
             model: "gpt-4o-mini-transcribe",
             language: language,
-            prompt: "",
           },
           input_audio_noise_reduction: {
             type: "near_field",
