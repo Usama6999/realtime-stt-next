@@ -214,14 +214,12 @@ export default function Transcription({ parentDarkMode }) {
               input_audio_format: "pcm16",
               input_audio_transcription: {
                 model: "gpt-4o-mini-transcribe",
+                prompt: userPrompt,
                 language: selectedLanguage,
               },
               turn_detection: {
                 type: "semantic_vad",
                 eagerness: "high",
-                threshold: 0.5,
-                prefix_padding_ms: 100,
-                silence_duration_ms: 200,
               },
               input_audio_noise_reduction: {
                 type: "near_field",

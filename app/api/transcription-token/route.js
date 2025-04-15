@@ -20,16 +20,14 @@ export async function GET(request) {
           input_audio_transcription: {
             model: "gpt-4o-mini-transcribe",
             language: language,
-            prompt: prompt || "",
+            prompt: "",
           },
           input_audio_noise_reduction: {
             type: "near_field",
           },
           turn_detection: {
-            type: "server_vad",
-            threshold: 0.3,
-            prefix_padding_ms: 150,
-            silence_duration_ms: 300,
+            type: "semantic_vad",
+            eagerness: "high",
           },
         }),
       }
